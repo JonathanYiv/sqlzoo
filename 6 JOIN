@@ -1,0 +1,115 @@
+Lesson
+
+1) SELECT matchid, player FROM goal WHERE teamid = 'GER';
+
+2) SELECT id, stadium, team1, team2 FROM game WHERE id = 1012;
+
+3) SELECT player, teamid, stadium, mdate
+FROM goal JOIN game ON id = matchid
+WHERE teamid = 'GER';
+
+4) SELECT team1, team2, player
+FROM goal JOIN game ON id = matchid
+WHERE player LIKE 'Mario%';
+
+5) SELECT player, teamid, coach, gtime
+FROM goal JOIN eteam ON teamid = id
+WHERE gtime <= 10;
+
+6) SELECT mdate, teamname 
+FROM game JOIN eteam ON team1 = eteam.id
+WHERE coach = 'Fernando Santos';
+
+7) SELECT player 
+FROM goal JOIN game ON matchid = id 
+WHERE stadium = 'National Stadium, Warsaw';
+
+8) SELECT DISTINCT player
+FROM goal JOIN game ON matchid = id
+WHERE (team1 = 'GER' OR team2 = 'GER')
+AND teamid <> 'GER';
+
+9) SELECT eteam.teamname, COUNT(teamid)
+FROM goal JOIN eteam ON teamid = id
+GROUP BY teamid, teamname;
+
+10) SELECT stadium, COUNT(matchid) 
+FROM game JOIN goal ON id = matchid 
+GROUP BY stadium;
+
+11) SELECT matchid, mdate, COUNT(matchid)
+FROM game JOIN goal ON id = matchid
+WHERE team1 = 'POL' OR team2 = 'POL'
+GROUP BY matchid, mdate;
+
+12) SELECT matchid, mdate, COUNT(matchid)
+FROM game JOIN goal ON id = matchid
+WHERE teamid = 'GER'
+GROUP BY matchid, mdate;
+
+13) 
+
+Goal: List every match with the goals scored by each team as shown.
+
+Need CASE WHEN
+
+This selects the whole table
+SELECT * FROM game JOIN goal ON id = matchid
+
+
+Score for Team 1
+SELECT matchid, COUNT(teamid)
+FROM game JOIN goal ON id = matchid
+WHERE teamid = team1
+GROUP BY matchid, teamid
+
+Score for Team 2
+SELECT matchid, COUNT(teamid)
+FROM game JOIN goal ON id = matchid
+WHERE teamid = team2
+GROUP BY matchid, teamid
+
+
+This produces the mdate, team1, score1, team2, but not score2
+SELECT mdate, team1, COUNT(teamid), team2
+FROM game JOIN goal ON id = matchid
+WHERE teamid = team1
+GROUP BY mdate, matchid, team1, team2;
+
+
+This creates all the necessary columns, but the values are wrong, including not accounting for zeroes
+SELECT mdate, team1, COUNT(teamid), team2, COUNT(teamid)
+FROM game JOIN goal ON id = matchid
+WHERE teamid = CASE teamid WHEN team1 THEN team1
+						   WHEN team2 THEN team2
+			   END
+GROUP BY mdate, matchid, team1, team2;
+
+
+does not work either
+SELECT mdate, team1, COUNT(teamid) AS one, team2, COUNT(teamid) AS two
+FROM game JOIN goal ON id = matchid
+WHERE one = CASE one WHEN team1 THEN team1 WHEN team2 THEN team2 END
+AND two = CASE two  WHEN team1 THEN team1 WHEN team2 THEN team2 END
+GROUP BY mdate, matchid, team1, team2;
+
+
+Nope...
+SELECT mdate, team1, COUNT(CASE teamid WHEN teamid = team1 THEN teamid ELSE 0), team2, COUNT(teamid) AS score2
+FROM game JOIN goal ON id = matchid
+
+GROUP BY mdate, matchid, team1, team2;
+
+
+Joining the two scores did not work either...
+SELECT * FROM
+(SELECT mdate, team1, COUNT(teamid)
+FROM game JOIN goal ON id = matchid
+WHERE teamid = team1
+GROUP BY mdate, matchid, team1, teamid) x
+JOIN
+(SELECT team2, COUNT(teamid)
+FROM game JOIN goal ON id = matchid
+WHERE teamid = team2
+GROUP BY matchid, team2, teamid) y
+ON x.matchid = y.matchid
