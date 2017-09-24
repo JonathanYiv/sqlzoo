@@ -1,0 +1,242 @@
+Lesson
+
+1) SELECT COUNT(*)
+FROM stops;
+
+2) SELECT id
+FROM stops
+WHERE name = 'Craiglockhart';
+
+3) SELECT id, name
+FROM stops JOIN route ON stops.id = route.stop
+WHERE num = '4';
+
+4) SELECT company, num, COUNT(*)
+FROM route WHERE stop=149 OR stop=53
+GROUP BY company, num
+HAVING COUNT(*) = 2;
+
+5) SELECT a.company, a.num, a.stop, b.stop
+FROM route a JOIN route b ON
+  (a.company=b.company AND a.num=b.num)
+WHERE a.stop=53
+AND b.stop = 149;
+
+6) SELECT a.company, a.num, stopa.name, stopb.name
+FROM route a JOIN route b ON
+  (a.company=b.company AND a.num=b.num)
+  JOIN stops stopa ON (a.stop=stopa.id)
+  JOIN stops stopb ON (b.stop=stopb.id)
+WHERE stopa.name='Craiglockhart'
+AND stopb.name = 'London Road';
+
+7) SELECT DISTINCT a.company, a.num
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopa.name = 'Haymarket'
+AND stopb.name = 'Leith';
+
+/* In Problems 6 and 7
+First, two different route tables are joined where companies and bus numbers are equal for a SELF JOIN.
+You can't use just companies or bus numbers because there could be matching companies with non-matching numbers and vice versa.
+This creates a table where each company's bus line (denoted by a unique pair of number and company) is matched with every other matching pair of number and company with different stops
+
+Then, the stops table is joined as stopa where the starting stop of the above table's first subtable is paired with every matching name
+Then, the stops table is joine again as stopb where the finishing stop of the above table's second subtable is paired with every matching name
+
+
+So essentially, it pairs routes with itself for every unique company/bus line pair to identify all existing stop to stop routes.
+Then it joins the stops table twice to name the stops.
+You can then establish a relationship between two stops by using a WHERE clause to identify that two stops are both in the same row.
+*/
+
+8) SELECT DISTINCT a.company, a.num
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopa.name = 'Craiglockhart'
+AND stopb.name = 'Tollcross';
+
+9) SELECT stopb.name, a.company, a.num
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopa.name = 'Craiglockhart';
+
+10) SELECT DISTINCT to_craiglockhart.num, to_craiglockhart.company, to_craiglockhart.transfer_stop, to_sighthill.num, to_sighthill.company
+FROM (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+	  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+	  JOIN stops stopa ON (a.stop = stopa.id)
+	  JOIN stops stopb ON (b.stop = stopb.id)
+	  WHERE stopb.name = 'Craiglockhart') to_craiglockhart
+JOIN (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+	  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+	  JOIN stops stopa ON (a.stop = stopa.id)
+	  JOIN stops stopb ON (b.stop = stopb.id)
+	  WHERE stopb.name = 'Sighthill') to_sighthill
+ON to_craiglockhart.transfer_stop = to_sighthill.transfer_stop
+ORDER BY CAST(to_craiglockhart.num AS int)
+
+
+# Below is thinking
+
+Finds every stop that starts at Craiglockhart
+SELECT stopb.name AS transfer_stop, a.company, a.num
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopa.name = 'Craiglockhart';
+
+Finds every stop which gets to Sighthill
+SELECT stopa.name AS transfer_stop, a.company, a.num
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopb.name = 'Sighthill';
+
+This appropriately merges the two tables. I need to identify the right things...
+SELECT *
+FROM (SELECT stopb.name AS transfer_stop, a.company, a.num
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopa.name = 'Craiglockhart') table1 JOIN (SELECT stopa.name AS transfer_stop, a.company, a.num
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopb.name = 'Sighthill') table2 ON table1.transfer_stop = table2.transfer_stop
+
+
+This appropriately merges the two tables. I need to identify the right things...
+SELECT table1.num, table1.company, table1.transfer_stop, table2.num, table2.company
+FROM (SELECT stopb.name AS transfer_stop, b.company, b.num
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopa.name = 'Craiglockhart') table1 JOIN (SELECT stopa.name AS transfer_stop, b.company, b.num
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopb.name = 'Sighthill') table2 ON table1.transfer_stop = table2.transfer_stop
+ORDER BY table1.num DESC
+
+
+Shows the first stop, the company and bus number, and the transfer stop.
+SELECT stopa.name, a.company, a.num, stopb.name AS transfer_stop
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopa.name = 'Craiglockhart';
+
+Shows the transfer stop, the company and bus number, and the final stop.
+SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopb.name = 'Sighthill';
+
+Appropriately combines both tables
+SELECT *
+FROM (SELECT stopa.name, a.company, a.num, stopb.name AS transfer_stop
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopa.name = 'Craiglockhart') first_bus JOIN (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopb.name = 'Sighthill') second_bus ON first_bus.transfer_stop = second_bus.transfer_stop
+
+
+hmmm
+SELECT first_bus.num, first_bus.company, first_bus.transfer_stop, second_bus.num, second_bus.company
+FROM (SELECT stopa.name, a.company, a.num, stopb.name AS transfer_stop
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopa.name = 'Craiglockhart') first_bus JOIN (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopb.name = 'Sighthill') second_bus ON first_bus.transfer_stop = second_bus.transfer_stop
+
+
+Added where clause so first stop is Craiglockhart and last stop is Sighthill
+SELECT first_bus.num, first_bus.company, first_bus.transfer_stop, second_bus.num, second_bus.company
+FROM (SELECT stopa.name AS first_stop, a.company, a.num, stopb.name AS transfer_stop
+	  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+	  JOIN stops stopa ON (a.stop = stopa.id)
+	  JOIN stops stopb ON (b.stop = stopb.id)
+	  WHERE stopa.name = 'Craiglockhart') first_bus 
+JOIN (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name AS final_stop
+	  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+	  JOIN stops stopa ON (a.stop = stopa.id)
+	  JOIN stops stopb ON (b.stop = stopb.id)
+	  WHERE stopb.name = 'Sighthill') second_bus 
+ON first_bus.transfer_stop = second_bus.transfer_stop
+	WHERE first_bus.first_stop = 'Craiglockhart'
+		AND second_bus.final_stop = 'Sighthill'
+
+
+
+
+Shows the first stop, the company and bus number, and the transfer stop.
+SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopb.name = 'Craiglockhart';
+
+Shows the transfer stop, the company and bus number, and the final stop.
+SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+JOIN stops stopa ON (a.stop = stopa.id)
+JOIN stops stopb ON (b.stop = stopb.id)
+WHERE stopb.name = 'Sighthill';
+
+
+SELECT *
+FROM (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+	  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+	  JOIN stops stopa ON (a.stop = stopa.id)
+	  JOIN stops stopb ON (b.stop = stopb.id)
+	  WHERE stopb.name = 'Craiglockhart') to_craiglockhart
+JOIN (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+	  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+	  JOIN stops stopa ON (a.stop = stopa.id)
+	  JOIN stops stopb ON (b.stop = stopb.id)
+	  WHERE stopb.name = 'Sighthill') to_sighthill
+ON to_craiglockhart.transfer_stop = to_sighthill.transfer_stop
+
+
+solution
+SELECT DISTINCT to_craiglockhart.num, to_craiglockhart.company, to_craiglockhart.transfer_stop, to_sighthill.num, to_sighthill.company
+FROM (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+	  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+	  JOIN stops stopa ON (a.stop = stopa.id)
+	  JOIN stops stopb ON (b.stop = stopb.id)
+	  WHERE stopb.name = 'Craiglockhart') to_craiglockhart
+JOIN (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+	  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+	  JOIN stops stopa ON (a.stop = stopa.id)
+	  JOIN stops stopb ON (b.stop = stopb.id)
+	  WHERE stopb.name = 'Sighthill') to_sighthill
+ON to_craiglockhart.transfer_stop = to_sighthill.transfer_stop
+ORDER BY CAST(to_craiglockhart.num AS int)
+
+
+Found the solution but this does not work
+SELECT DISTINCT first_bus.num, first_bus.company, first_bus.transfer_stop, second_bus.num, second_bus.company
+	FROM (SELECT stopa.name, a.company, a.num, stopb.name AS transfer_stop
+		  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+		  JOIN stops stopa ON (a.stop = stopa.id)
+		  JOIN stops stopb ON (b.stop = stopb.id)
+		  WHERE stopa.name = 'Craiglockhart') first_bus 
+	JOIN (SELECT stopa.name AS transfer_stop, a.company, a.num, stopb.name
+		  FROM route a JOIN route b ON (a.company = b.company AND a.num = b.num)
+		  JOIN stops stopa ON (a.stop = stopa.id)
+		  JOIN stops stopb ON (b.stop = stopb.id)
+		  WHERE stopb.name = 'Sighthill') second_bus 
+	ON first_bus.transfer_stop = second_bus.transfer_stop
+ORDER BY CAST(first_bus.num AS int)
